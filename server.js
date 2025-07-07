@@ -3,6 +3,10 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const createError = require('http-errors');
+require('dotenv').config();
+const tiendaRoutes = require('./routes/tienda.routes');
+app.use('/', tiendaRoutes);
+
 
 // Conexión con la BD
 mongoose
