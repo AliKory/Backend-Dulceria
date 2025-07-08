@@ -1,5 +1,4 @@
 require('dotenv').config({path: '.env'});
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -18,38 +17,64 @@ mongoose
 
 // Configuración del servidor web
 const TiendaRoutes = require('./routes/tienda.routes');
-
 const app = express();
 
+// Middlewares de configuración
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ 
+app.use(bodyParser.urlencoded({     
     extended: false,
 }));
 
-app.use(cors());
+// Configurar CORS correctamente
+app.use(cors({
+  origin: ['http://localhost:4200'], // Agrega tu dominio de frontend
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-app.use('/api', TiendaRoutes);
-
+// Ruta de prueba
 app.get('/', (req, res) => {
-  res.send('API de Dulcería funcionando ✅');
+  res.json({ 
+    message: 'API de Dulcería funcionando ✅',
+    endpoints: [
+      'GET /api/tiendas - Listar productos',
+      'POST /api/tiendas - Agregar producto',
+      'GET /api/tiendas/:id - Obtener producto',
+      'PUT /api/tiendas/:id - Actualizar producto',
+      'DELETE /api/tiendas/:id - Eliminar producto'
+    ]
+  });
 });
+
+// IMPORTANTE: Las rutas deben ir ANTES de los manejadores de error
+app.use('/api', TiendaRoutes);
 
 // Habilitar el puerto
 const port = process.env.PORT || 4000;
 const server = app.listen(port, () => {
     console.log(`Servidor escuchando en el puerto: ${port}`);
-})
-
-// Manejador de error 404
-app.use((req, res, next) => {
-    next(createError(404))
+    console.log(`API disponible en: http://localhost:${port}/api/tiendas`);
 });
 
-// Manejador de errores
+// IMPORTANTE: Los manejadores de error van AL FINAL
+// Manejador de error 404 - DEBE IR DESPUÉS de las rutas
+app.use((req, res, next) => {
+    console.log(`Ruta no encontrada: ${req.method} ${req.url}`);
+    next(createError(404, `Ruta no encontrada: ${req.method} ${req.url}`));
+});
+
+// Manejador de errores generales
 app.use((err, req, res, next) => {
-  console.log(err.message);
+  console.log('Error:', err.message);
   if (!err.statusCode) err.statusCode = 500;
-  res.status(err.statusCode).send(err.message)
+  
+  // Enviar respuesta JSON en lugar de texto plano
+  res.status(err.statusCode).json({
+    error: true,
+    message: err.message,
+    status: err.statusCode
+  });
 });
 
 module.exports = app;

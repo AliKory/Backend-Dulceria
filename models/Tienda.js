@@ -12,17 +12,29 @@ let Tienda = new Schema({
     precio: {
         type: Number,
     },
-    caducidad:{
+    caducidad: {
         type: Date,
     },
     cantidad: {
         type: Number,
     },
-    imagen: {
-        imagen: String,
+    // Campos para imagen de Cloudinary
+    imagenUrl: {
+        type: String,
+        default: null
     },
+    imagenPublicId: {
+        type: String,
+        default: null
+    },
+    // Campo para imagen base64 (compatibilidad con método anterior)
+    imagen: {
+        type: String,
+        default: null
+    }
 }, {
-    collection: 'tienda'  
-})
+    collection: 'tienda',
+    timestamps: true // Agregar createdAt y updatedAt automáticamente
+});
 
 module.exports = mongoose.model('Tienda', Tienda);
