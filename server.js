@@ -27,7 +27,7 @@ app.use(bodyParser.urlencoded({
 
 // Configurar CORS correctamente
 app.use(cors({
-  origin: ['http://localhost:4200'], // Agrega tu dominio de frontend
+  origin: ['https://dulceriaproject.netlify.app', 'http://localhost:4200'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
