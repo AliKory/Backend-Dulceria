@@ -1,112 +1,104 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { v2: cloudinary } = require('cloudinary');
+const streamifier = require('streamifier');
 
-// Configuración de Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-// Configuración de almacenamiento con Cloudinary
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'tienda', // Carpeta en Cloudinary
-    allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
-    transformation: [{ width: 500, height: 500, crop: 'limit' }] // Opcional: redimensionar
-  },
-});
-
-const upload = multer({ storage: storage });
-
+// Modelo Tienda
 let Tienda = require('../models/Tienda');
 
-// Agregar un nuevo producto a la tienda
-router.post('/agregar', upload.single('imagen'), (req, res) => {
-  const { nombre, precio, caducidad, cantidad, tipo } = req.body;
+// Multer configuración (memoria para pasar el buffer a Cloudinary)
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
-  const nuevaTienda = new Tienda({
-    nombre,
-    precio,
-    caducidad,
-    cantidad,
-    tipo,
-    imagen: req.file ? req.file.path : undefined // URL de Cloudinary
-  });
+// Agregar un nuevo producto
+router.route('/agregar').post(upload.single('imagen'), async (req, res) => {
+    try {
+        let imagenURL = '';
 
-  nuevaTienda.save()
-    .then(data => {
-      res.send(data);
-    })
-    .catch(error => {
-      console.error(error);
-      res.status(500).send(error);
-    });
+        // Si hay imagen, subirla a Cloudinary
+        if (req.file) {
+            const streamUpload = (req) => {
+                return new Promise((resolve, reject) => {
+                    let stream = cloudinary.uploader.upload_stream((error, result) => {
+                        if (result) {
+                            resolve(result);
+                        } else {
+                            reject(error);
+                        }
+                    });
+                    streamifier.createReadStream(req.file.buffer).pipe(stream);
+                });
+            };
+
+            const result = await streamUpload(req);
+            imagenURL = result.secure_url;
+        }
+
+        // Crear producto
+        const nuevoProducto = {
+            nombre: req.body.nombre,
+            precio: req.body.precio,
+            caducidad: req.body.caducidad,
+            cantidad: req.body.cantidad,
+            tipo: req.body.tipo,
+            imagen: imagenURL
+        };
+
+        const productoCreado = await Tienda.create(nuevoProducto);
+        console.log('Producto agregado correctamente');
+        res.send(productoCreado);
+    } catch (error) {
+        console.log(error);
+        res.status(500).send('Error al agregar producto');
+    }
 });
 
-// Actualizar un producto
-router.route('/actualizar/:id').put(upload.single('imagen'), (req, res) => {
-  const { nombre, precio, caducidad, cantidad, tipo } = req.body;
+// Obtener todos los productos
+router.route('/productos').get((req, res) => {
+    Tienda.find()
+        .then((data) => res.send(data))
+        .catch((error) => {
+            console.log(error);
+            res.status(500).send('Error al obtener productos');
+        });
+});
 
-  const updateData = {
-    nombre,
-    precio,
-    caducidad,
-    cantidad,
-    tipo,
-    imagen: req.file ? req.file.path : req.body.imagen
-  };
+// Obtener un solo producto por su ID
+router.route('/producto/:id').get((req, res) => {
+    Tienda.findById(req.params.id)
+        .then((data) => res.send(data))
+        .catch((error) => {
+            console.log(error);
+            res.status(500).send('Error al obtener producto');
+        });
+});
 
-  Tienda.findByIdAndUpdate(req.params.id, { $set: updateData }, { new: true })
+// Actualizar producto
+router.route('/actualizar/:id').put((req, res) => {
+    Tienda.findByIdAndUpdate(req.params.id, {
+        $set: req.body
+    })
     .then((data) => {
-      if (!data) return res.status(404).send('Producto no encontrado para actualizar');
-      console.log('Se actualizó el producto correctamente');
-      res.send(data);
+        console.log('Producto actualizado correctamente');
+        res.send(data);
     })
     .catch((error) => {
-      console.log(error);
-      res.status(500).send(error);
+        console.log(error);
+        res.status(500).send('Error al actualizar producto');
     });
 });
 
-// Resto de tus rutas...
-router.route('/tiendas').get((req, res) => {
-  Tienda.find()
-    .then((data) => {
-      res.send(data);
-    })
-    .catch((error) => {
-      console.log(error);
-      res.status(500).send(error);
-    });
-});
-
-router.route('/tienda/:id').get((req, res) => {
-  Tienda.findById(req.params.id)
-    .then((data) => {
-      if (!data) return res.status(404).send('Producto no encontrado');
-      res.send(data);
-    })
-    .catch((error) => {
-      console.log(error);
-      res.status(500).send(error);
-    });
-});
-
+// Eliminar producto
 router.route('/eliminar/:id').delete((req, res) => {
-  Tienda.findByIdAndDelete(req.params.id)
+    Tienda.findByIdAndDelete(req.params.id)
     .then((data) => {
-      if (!data) return res.status(404).send('Producto no encontrado para eliminar');
-      console.log('Se eliminó el producto correctamente');
-      res.send(data);
+        console.log('Producto eliminado correctamente');
+        res.send(data);
     })
     .catch((error) => {
-      console.log(error);
-      res.status(500).send(error);
+        console.log(error);
+        res.status(500).send('Error al eliminar producto');
     });
 });
 
