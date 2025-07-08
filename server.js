@@ -30,6 +30,10 @@ app.use(cors());
 
 app.use('/api', TiendaRoutes);
 
+app.get('/', (req, res) => {
+  res.send('API de Dulcería funcionando ✅');
+});
+
 // Habilitar el puerto
 const port = process.env.PORT || 4000;
 const server = app.listen(port, () => {
