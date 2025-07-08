@@ -19,7 +19,7 @@ let Tienda = new Schema({
         type: Number,
     },
     imagen: {
-        type: String,
+        imagen: String,
     },
 }, {
     collection: 'tienda'  

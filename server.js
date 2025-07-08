@@ -1,53 +1,51 @@
+require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const createError = require('http-errors');
-require('dotenv').config();
-const tiendaRoutes = require('./routes/tienda.routes');
-app.use('/', tiendaRoutes);
 
-
-// Conexión con la BD
+// Conexión con la BD usando variable de entorno
 mongoose
-   .connect('mongodb+srv://alisonhmti22:VCf382DTWRv0neKQ@tiendas.2f7jdxm.mongodb.net/?retryWrites=true&w=majority&appName=tiendas')
+  .connect(process.env.MONGODB_URI)
   .then((x) => {
-    console.log('Conectado a la BD:', x.connections[0].name);
+    console.log(`Conectado a la BD: ${x.connections[0].name}`);
   })
   .catch((error) => {
     console.log('Error de conexión a la BD:', error);
   });
 
 // Configuración del servidor web
-const tiendaRoutes = require('./routes/tienda.routes');
-const {create}= require('./models/Tienda');
-
+const TiendaRoutes = require('./routes/tienda.routes');
 
 const app = express();
 
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ 
+    extended: false,
+}));
+
 app.use(cors());
 
-app.use('/api', tiendaRoutes);
+app.use('/api', TiendaRoutes);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use('/uploads', express.static('uploads'));
-
-// Habilitamos el puerto 
+// Habilitar el puerto
 const port = process.env.PORT || 4000;
- const server= app.listen(port, () => {
-  console.log('Servidor escuchando en el puerto: ' + port);
-});
+const server = app.listen(port, () => {
+    console.log(`Servidor escuchando en el puerto: ${port}`);
+})
 
-// Manejo de error 404
+// Manejador de error 404
 app.use((req, res, next) => {
-  next(createError(404))
+    next(createError(404))
 });
 
-// Manejo de error general
-app.use(function(err, req, res, next) {
-  console.error(err.message);
+// Manejador de errores
+app.use((err, req, res, next) => {
+  console.log(err.message);
   if (!err.statusCode) err.statusCode = 500;
-  res.status(err.statusCode).send(err.message);
+  res.status(err.statusCode).send(err.message)
 });
+
+module.exports = app;
